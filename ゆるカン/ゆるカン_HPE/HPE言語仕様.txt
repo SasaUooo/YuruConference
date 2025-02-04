@@ -1,0 +1,134 @@
+このファイルはHotProcessExecutorで読み込んで実行可能なテキストファイル（以下スクリプト）の言語仕様を簡単にまとめた文書です。
+
+最初に：
+	勢いだけで作った処理なので、ガバガバです。
+	制約も多いしパフォーマンスも多分悪いです。
+	追記：めっちゃ頑張ってパフォーマンス良くしました。悪くはない程度。
+
+構造：
+	処理は1行単位で解釈されます。
+	スクリプトは変数部と関数部の順に記述する必要があります。
+	変数部と関数部を混ぜて記述することはできません。
+	// 変数部
+	var hoge
+	var fuga
+
+	//関数部
+	add(hoge,fuga)>>hoge
+	log(hoge,fuga)
+
+文法：
+	変数：
+		var 変数名 初期値
+		var hoge 1
+		var fuga 2.5
+		var hogehoge
+
+		注意事項：
+			変数名はアルファベットから始まる必要があります
+			初期値を書かなかった場合は0.0が初期値になります
+			同名の変数を複数回定義した場合の動作は未定義です（サボり）
+			半角スペースが増えるとバグるはずです
+
+	関数：
+		関数名(引数,引数,...)>>戻り値
+		log(hoge,fuga)
+		add(hoge,1)>>hoge
+
+		注意事項：
+			引数はいくらでも増やせますが使用する要素は関数処理の実装基準です
+			引数が少ない場合の処理は関数処理の実装側で定義してください
+			引数は全て値渡しです
+			関数部は半角スペースを入れても大丈夫です
+			戻り値は基本0.0fが正常値です
+			例：add(hoge, hoge) >> hoge
+
+	キーワード：
+		#キーワード
+		var hoge #inputN
+		#once log(hoge)
+		#if greater(5,0)
+		#endif
+		#while greater(5,0)
+		#endwhile
+
+		解説：
+			var 変数名 #inputN:
+				Nには1以上の自然数が入ります
+				引数で受け取った値のN番目を初期値として初期化できます
+				#inputN自体を変数として扱うことは出来ません
+
+			#once 関数：
+				このキーワードを付けると最初に一回だけ処理が実行されます
+
+			#if 条件式：
+				条件式がtrueの時だけ#endifまでの処理を実行します
+			
+			#endif：
+				#ifブロックを終了します
+
+			#while 条件式：
+				条件式がtrueの間#endwhileまでの処理を繰り返し実行します
+
+			#endwhile：
+				#whileブロックを終了します
+
+		注意事項：
+			キーワードはテキストファイル解釈で実装しているので安易な追加が難しいです
+			#ifに条件式以外を入れると常にtrueになります
+
+	その他：
+		コメント：	
+			文頭に//を付けるとコメントになります
+
+
+予定：
+	FileProcessの一番最初に引数を追加できるようにしたい（プレースホルダー）
+
+
+処理関数の追加テンプレート：
+-------------------------------------------------------------------------
+#include "../IProcess.h"	// IProcessをInclude
+
+class SomeProcess : public IProcess
+{
+	// 条件式ならこのマクロを書く（通常はいらない）
+	HPE_THIS_IS_CONDITION(SomeProcess)
+private:
+	Argument Process(std::any& _owner, const std::vector<Argument>& _args) override {
+		if (_args.size() < 2) return 0.0f;	// 引数の数チェック
+		return _args[0] + _args[1];			// 処理と戻り値
+	}
+};
+
+// 関数名登録マクロ
+// 左にクラス、右にtxtファイルで使うときの文字列を指定
+HPE_REGISTER_PROCESS(SomeProcess, "funcName");	
+-------------------------------------------------------------------------
+
+
+特定のクラスのポインタのみ使える関数のテンプレート：
+-------------------------------------------------------------------------
+class SomeProcess : public IProcess {
+private:
+	Argument Process(std::any& _owner, const std::vector<Argument>& _args) override {
+		try {
+			SomeClass* owner = std::any_cast<SomeClass*>(_owner);	// 変換できないとstd::bad_any_castがthrowされる
+			if (_args.size() < 2) return -1.0f;						// 引数の数チェック
+			owner->SomeFunc(_args[0], _args[1]);					// なにがしかの処理
+			return 0.0f;
+		}
+		catch (std::exception& e) {
+			// SomeClass以外への操作は常に不正
+			std::cerr << e.what() << std::endl;
+			std::cerr << "ERROR: SomeClassではないクラスに対してmove関数を実行しました" << std::endl;
+			return -1.0f;
+		}
+	}
+};
+
+
+// 関数名登録マクロ
+// 左にクラス、右にtxtファイルで使うときの文字列を指定
+HPE_REGISTER_PROCESS(SomeProcess, "funcName");	
+-------------------------------------------------------------------------

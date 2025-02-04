@@ -1,0 +1,44 @@
+// 入力されたところから100回で(10,-10)に行くコード
+// floatしかサポートしていないせいで不安定。
+var duration 100
+var count 0
+var delta
+var t 0
+
+var targetX 10
+var targetY -10
+// 入力された値を使う
+var startX #input1
+var startY #input2
+
+var currentX
+var currentY
+var distX
+var distY
+var deltaX
+var deltaY
+
+// #onceは一回だけ実行される
+// 距離を変数に格納
+#once subtract(targetX,startX)>>distX
+#once subtract(targetY,startY)>>distY
+
+// 一回当たりの変化量を計算
+#once divide(1,duration)>>delta
+
+// countがduration未満なら処理を実行
+#if less(count,duration)
+
+add(t,delta)>>t
+multiple(distX,t)>>deltaX
+add(startX,deltaX)>>currentX
+
+multiple(distY,t)>>deltaY
+add(startY,deltaY)>>currentY
+
+#endif
+
+// カウントを1増加
+add(count,1)>>count
+
+log(currentX, currentY)
